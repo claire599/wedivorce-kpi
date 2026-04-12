@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KPI Google Ads - Wedivorce</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,sans-serif}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const BIN_ID="69dbdafa36566621a8a6aa98";
+const BIN_KEY=["$2a","$10","$Dj63Oq4EoircmvT4pyVBxu/UN/09TFt9i9aMZGL3NlOD/dHYMrSm."].join("");
+const BIN_URL="https://api.jsonbin.io/v3/b/"+BIN_ID;
+const CAMPS=["Marque","HIDF","IDF"];
+const COLORS={Marque:"#185FA5",HIDF:"#0F6E56",IDF:"#993C1D"};
+const BGCOLS={Marque:"#e8f0fe",HIDF:"#e6f4ea",IDF:"#fce8e6"};
+const COLS=[
+  {key:"impr",label:"Impr.",dec:0},{key:"clics",label:"Clics",dec:0},{key:"cpc",label:"CPC (EUR)",dec:2},
+  {key:"conv_total",label:"Conv. totales",dec:1},{key:"conv_devis",label:"Conv. Devis",dec:1},{key:"conv_compte",label:"Conv. Crea Cpt",dec:1},
+  {key:"cout_total",label:"Cout total (EUR)",dec:2},{key:"ctr",label:"CTR (%)",dec:2},{key:"tx_global",label:"Tx conv. global (%)",dec:2},
+  {key:"tx_devis",label:"Tx conv. Devis (%)",dec:2},{key:"tx_compte",label:"Tx conv. Crea (%)",dec:2},{key:"cout_conv",label:"Cout/Conv (EUR)",dec:2},
+];
+const GADS_MAP={"jour":"date","campagne":"campaign","clics":"clics","impr.":"impr","ctr":"ctr","cpc moy.":"cpc","co\u00fbt":"cout_total","conversions":"conv_total","co\u00fbt/conv.":"cout_conv","taux de conv.":"tx_global"};
+const CAMP_MAP={"[dr] campagne marque_wedivorce.fr  12566":"Marque","[dr] campagne hors idf_wedivorce.fr  14":"HIDF","[dr] campagne idf_wedivorce.fr  14":"IDF"};
+const FERIES=new Set(["2025-01-01","2025-04-18","2025-04-21","2025-05-01","2025-05-08","2025-05-29","2025-06-09","2025-07-14","2025-08-15","2025-11-01","2025-11-11","2025-12-25"]);
+const ML=["janvier","f\u00e9vrier","mars","avril","mai","juin","juillet","ao\u00fbt","septembre","octobre","novembre","d\u00e9cembre"];
+const MP={"janvier":"01","f\u00e9vrier":"02","mars":"03","avril":"04","mai":"05","juin":"06","juillet":"07","ao\u00fbt":"08","septembre":"09","octobre":"10","novembre":"11","d\u00e9cembre":"12"};
+function isWE(d){const day=new Date(d).getDay();return day===0||day===6;}
+function isF(d){return FERIES.has(d);}
+function isSp(d){return isWE(d)||isF(d);}
+function pDate(v){if(!v)return"";const s=v.trim();if(s.match(/^\d{4}-\d{2}-\d{2}$/))return s;const m=s.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/);if(m)return m[3]+"-"+(MP[m[2].toLowerCase()]||"01")+"-"+String(m[1]).padStart(2,"0");const p=s.split("/");if(p.length===3)return p[2]+"-"+p[1].padStart(2,"0")+"-"+p[0].padStart(2,"0");return s;}
+function pNum(v){if(!v||v.trim()==="--"||v.trim()===" --")return"";return v.replace(/\s/g,"").replace(/[%]/g,"").replace(",",".").trim();}
+function pCSV(line){const r=[];let c="",q=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){q=!q;}else if(ch===","&&!q){r.push(c.trim());c="";}else{c+=ch;}}r.push(c.trim());return r;}
+function nv(v){return parseFloat(v)||0;}
+function fmt(v,dec){const f=parseFloat(v);if(v===""||v===null||v===undefined||isNaN(f))return"";return f.toLocaleString("fr-FR",{minimumFractionDigits:dec,maximumFractionDigits:dec});}
+function sumR(rows){const s={impr:0,clics:0,cout_total:0,conv_total:0,conv_devis:0,conv_compte:0};rows.forEach(r=>Object.keys(s).forEach(k=>{s[k]+=nv(r[k]);}));s.cpc=s.clics>0?(s.cout_total/s.clics).toFixed(2):"";s.ctr=s.impr>0?((s.clics/s.impr)*100).toFixed(2):"";s.tx_global=s.clics>0?((s.conv_total/s.clics)*100).toFixed(2):"";s.tx_devis=s.clics>0?((s.conv_devis/s.clics)*100).toFixed(2):"";s.tx_compte=s.clics>0?((s.conv_compte/s.clics)*100).toFixed(2):"";s.cout_conv=s.conv_total>0?(s.cout_total/s.conv_total).toFixed(2):"";return s;}
+function isoWeek(ds){const d=new Date(ds);const day=d.getDay()||7;d.setDate(d.getDate()+4-day);const j=new Date(d.getFullYear(),0,1);const w=Math.ceil(((d-j)/86400000+1)/7);return d.getFullYear()+" - Sem. "+String(w).padStart(2,"0");}
+function gKey(date,period){if(period==="Jour")return date;if(period==="Semaine")return isoWeek(date);const d=new Date(date);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");}
+function fKey(key,period){if(period!=="Mois")return key;const parts=key.split("-");return ML[parseInt(parts[1])-1]+" "+parts[0];}
+const today=new Date().toISOString().slice(0,10);
+const TH=function(props){return React.createElement("th",{style:{padding:"10px 12px",paddingLeft:props.left?"20px":"12px",textAlign:props.left?"left":"right",fontSize:"10px",fontWeight:700,color:"#8892b0",textTransform:"uppercase",whiteSpace:"nowrap",borderBottom:"1px solid #e8ecf3",background:"#f8f9fc",position:"sticky",top:0,zIndex:2}},props.children);};
+function App(){
+  const[view,setView]=React.useState("saisie");
+  const[period,setPeriod]=React.useState("Jour");
+  const[entries,setEntries]=React.useState([]);
+  const[loading,setLoading]=React.useState(true);
+  const[saving,setSaving]=React.useState(false);
+  const[date,setDate]=React.useState(today);
+  const[form,setForm]=React.useState({});
+  const[toast,setToast]=React.useState("");
+  const[csvErr,setCsvErr]=React.useState("");
+  React.useEffect(function(){fetch(BIN_URL+"/latest",{headers:{"X-Master-Key":BIN_KEY}}).then(function(r){return r.json();}).then(function(d){setEntries(d.record.entries||[]);}).catch(function(){}).finally(function(){setLoading(false);});},[]); 
+  function flash(m){setToast(m);setTimeout(function(){setToast("");},2500);}
+  function getF(camp,key){var v=form[camp+"_"+key];return v!==undefined?v:"";}
+  function setF(camp,key,val){setForm(function(p){var n=Object.assign({},p);n[camp+"_"+key]=val;return n;});}
+  function upd(next){setEntries(next);setSaving(true);fetch(BIN_URL,{method:"PUT",headers:{"Content-Type":"application/json","X-Master-Key":BIN_KEY},body:JSON.stringify({entries:next})}).finally(function(){setSaving(false);});}
+  function loadDate(d){setDate(d);var nf={};CAMPS.forEach(function(camp){var ex=entries.find(function(e){return e.date===d&&e.campaign===camp;});if(ex)COLS.forEach(function(c){nf[camp+"_"+c.key]=ex[c.key]!==undefined?ex[c.key]:"";});});setForm(nf);}
+  function save(){var next=entries.slice();CAMPS.forEach(function(camp){var row={date:date,campaign:camp};COLS.forEach(function(c){row[c.key]=getF(camp,c.key);});var i=next.findIndex(function(e){return e.date===date&&e.campaign===camp;});if(i>=0)next[i]=row;else next.push(row);});upd(next);flash("Enregistre");}
+  var grouped=React.useMemo(function(){var g={};entries.forEach(function(e){var k=gKey(e.date,period);if(!g[k])g[k]=[];g[k].push(e);});var keys=Object.keys(g).sort();var result={};keys.forEach(function(k){result[k]=g[k];});return result;},[entries,period]);
+  function doExport(){var h=["Periode","Campagne"].concat(COLS.map(function(c){return c.label;}));var lines=[h.join(";")];Object.keys(grouped).forEach(function(pk){var rows=grouped[pk];CAMPS.filter(function(cp){return rows.some(function(r){return r.campaign===cp;});}).forEach(function(camp){var s=sumR(rows.filter(function(r){return r.campaign===camp;}));lines.push([fKey(pk,period),camp].concat(COLS.map(function(c){return fmt(s[c.key],c.dec).replace(/\s/g,"");})).join(";"));});var ts=sumR(rows.filter(function(r){return CAMPS.includes(r.campaign);}));lines.push([fKey(pk,period),"Total"].concat(COLS.map(function(c){return fmt(ts[c.key],c.dec).replace(/\s/g,"");})).join(";"));});var a=document.createElement("a");a.href="data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent(lines.join("\n"));a.download="kpi_wedivorce_"+period.toLowerCase()+".csv";document.body.appendChild(a);a.click();document.body.removeChild(a);}
+  function handleCSV(e){var file=e.target.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(ev){try{var all=ev.target.result.split(/\r?\n/).filter(function(l){return l.trim();});var sep=all[0].includes("\t")?"\t":",";var heads=all[0].split(sep).map(function(h){return h.trim().toLowerCase();});var isScript=heads.includes("jour")&&heads.findIndex(function(h){return h.includes("impr");})>=0;if(isScript){var iD=heads.findIndex(function(h){return h==="jour";}),iC=heads.findIndex(function(h){return h==="campagne";}),iI=heads.findIndex(function(h){return h.includes("impr");}),iCl=heads.findIndex(function(h){return h.includes("clic");}),iCo=heads.findIndex(function(h){return h.includes("cout total")||h.includes("co\u00fbt total");}),iCv=heads.findIndex(function(h){return h.includes("conv. total")||h.includes("conv totale");}),iCtr=heads.findIndex(function(h){return h==="ctr";}),iCpc=heads.findIndex(function(h){return h.includes("cpc");}),iCcv=heads.findIndex(function(h){return h.includes("cout/conv")||h.includes("co\u00fbt/conv");});var rows=[];all.slice(1).forEach(function(l){var v=l.split(sep).map(function(x){return x.trim();});var camp=v[iC]?v[iC].trim():"";if(!CAMPS.includes(camp))return;rows.push({date:v[iD]?v[iD].trim():"",campaign:camp,impr:pNum(v[iI]),clics:pNum(v[iCl]),cout_total:pNum(v[iCo]),conv_total:pNum(v[iCv]),conv_devis:"",conv_compte:"",ctr:pNum(v[iCtr]),cpc:pNum(v[iCpc]),cout_conv:pNum(v[iCcv])});});if(!rows.length){setCsvErr("Aucune ligne reconnue.");return;}var u=entries.slice();rows.forEach(function(nr){var i=u.findIndex(function(e){return e.date===nr.date&&e.campaign===nr.campaign;});if(i>=0)u[i]=Object.assign({},u[i],nr);else u.push(nr);});upd(u);setCsvErr("");flash(rows.length+" lignes importees");}else{var hIdx=all.findIndex(function(l){var low=l.toLowerCase();return low.includes("campagne")&&(low.includes("clics")||low.includes("impr"));});if(hIdx<0){setCsvErr("En-tetes introuvables.");return;}var h2=pCSV(all[hIdx]).map(function(h){return h.trim().toLowerCase();});var rows2=[];all.slice(hIdx+1).filter(function(l){return l.trim()&&!l.toLowerCase().startsWith("total");}).forEach(function(l){var v=pCSV(l);var o={};h2.forEach(function(h,i){o[h]=v[i]?v[i].trim():"";});var mapped={};Object.entries(GADS_MAP).forEach(function(entry){if(o[entry[0]]!==undefined)mapped[entry[1]]=o[entry[0]];});if(!mapped.date||!mapped.campaign)return;mapped.date=pDate(mapped.date);if(!mapped.date.match(/^\d{4}-\d{2}-\d{2}$/))return;mapped.campaign=CAMP_MAP[mapped.campaign.trim().toLowerCase()];if(!mapped.campaign)return;["clics","impr","cout_total","conv_total","cout_conv","cpc","ctr","tx_global"].forEach(function(k){if(mapped[k]!==undefined)mapped[k]=pNum(mapped[k]);});rows2.push(mapped);});if(!rows2.length){setCsvErr("Aucune ligne reconnue.");return;}var u2=entries.slice();rows2.forEach(function(nr){var i=u2.findIndex(function(e){return e.date===nr.date&&e.campaign===nr.campaign;});if(i>=0)u2[i]=Object.assign({},u2[i],nr);else u2.push(nr);});upd(u2);setCsvErr("");flash(rows2.length+" lignes importees");}}catch(err){setCsvErr("Erreur: "+err.message);}};reader.readAsText(file,"utf-8");e.target.value="";}
+  function handleConv(e){var file=e.target.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(ev){try{var lines=ev.target.result.split(/\r?\n/).filter(function(l){return l.trim();});var heads=lines[0].split(",").map(function(h){return h.trim().toLowerCase();});var iD=heads.indexOf("date"),iC=heads.indexOf("campagne"),iA=heads.indexOf("action de conversion"),iV=heads.indexOf("conversions");if([iD,iC,iA,iV].includes(-1)){setCsvErr("Colonnes manquantes.");return;}var ups={};lines.slice(1).forEach(function(l){var v=pCSV(l);var date=v[iD]?v[iD].trim():"",camp=v[iC]?v[iC].trim():"",action=v[iA]?v[iA].trim():"",conv=parseFloat(v[iV])||0;if(!date||!camp||!action)return;var k=date+"_"+camp;if(!ups[k])ups[k]={date:date,campaign:camp,conv_devis:0,conv_compte:0};if(action.includes("Devis Finalis"))ups[k].conv_devis+=conv;if(action.includes("Creation de Compte")||action.includes("Cr\u00e9ation de Compte"))ups[k].conv_compte+=conv;});var u=entries.slice();Object.values(ups).forEach(function(up){var i=u.findIndex(function(e){return e.date===up.date&&e.campaign===up.campaign;});if(i>=0)u[i]=Object.assign({},u[i],{conv_devis:up.conv_devis,conv_compte:up.conv_compte});else u.push({date:up.date,campaign:up.campaign,conv_devis:up.conv_devis,conv_compte:up.conv_compte});});upd(u);setCsvErr("");flash("Conversions importees");}catch(err){setCsvErr("Erreur: "+err.message);}};reader.readAsText(file,"utf-8");e.target.value="";}
+  var dot=function(camp){return{display:"inline-block",width:"8px",height:"8px",borderRadius:"50%",background:COLORS[camp],marginRight:"7px"};};
+  var pill=function(camp){return{padding:"4px 12px",borderRadius:"20px",fontSize:"11px",fontWeight:600,background:BGCOLS[camp],color:COLORS[camp]};};
+  var nav=function(a){return{display:"flex",alignItems:"center",gap:"10px",padding:"9px 20px",fontSize:"12px",color:a?"#fff":"#8892b0",cursor:"pointer",background:a?"rgba(100,149,237,.15)":"transparent",borderLeft:a?"2px solid #4f8ef7":"2px solid transparent"};};
+  var pt=function(a){return{padding:"5px 14px",borderRadius:"6px",fontSize:"12px",cursor:"pointer",color:a?"#1a1a2e":"#6b7aaa",fontWeight:a?500:400,border:"none",background:a?"#fff":"none"};};
+  var inp={background:"#f4f6fa",border:"1px solid #e0e5f0",borderRadius:"6px",padding:"5px 7px",fontSize:"12px",color:"#1a1a2e",textAlign:"right",width:"80px"};
+  var tds=function(bold){return{padding:"11px 12px",textAlign:"right",fontSize:"12px",color:bold?"#1a1a2e":"#2d3561",whiteSpace:"nowrap",fontWeight:bold?700:400};};
+  var gkeys=Object.keys(grouped);
+  return (
+    <div style={{display:"flex",minHeight:"100vh",fontFamily:"system-ui,sans-serif",fontSize:"13px"}}>
+      <div style={{width:"200px",background:"#1a1a2e",display:"flex",flexDirection:"column",padding:"20px 0",flexShrink:0}}>
+        <div style={{padding:"0 20px 24px",fontSize:"14px",fontWeight:600,color:"#fff",borderBottom:"1px solid rgba(255,255,255,.08)"}}>
+          Wedivorce.fr<span style={{display:"block",fontSize:"10px",fontWeight:400,color:"#6b7aaa",marginTop:"3px",textTransform:"uppercase"}}>Google Ads KPI</span>
+        </div>
+        <div style={{padding:"16px 0"}}>
+          {[{id:"saisie",label:"Saisie"},{id:"tableau",label:"Tableau"},{id:"csv",label:"Import CSV"}].map(function(it){return(
+            <div key={it.id} style={nav(view===it.id)} onClick={function(){setView(it.id);}}>{it.label}</div>
+          );})}
+        </div>
+        {saving&&<div style={{padding:"0 20px",fontSize:"10px",color:"#6b7aaa"}}>Sauvegarde...</div>}
+      </div>
+      <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,background:"#f4f6fa"}}>
+        <div style={{background:"#fff",borderBottom:"1px solid #e8ecf3",padding:"0 28px",height:"52px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"12px",flexShrink:0}}>
+          <div style={{fontSize:"15px",fontWeight:600,color:"#1a1a2e"}}>{view==="saisie"?"Saisie journaliere":view==="tableau"?"Tableau consolide":"Import CSV"}</div>
+          <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+            {view==="tableau"&&<div style={{display:"flex",background:"#f4f6fa",borderRadius:"8px",padding:"3px",gap:"2px"}}>{["Jour","Semaine","Mois"].map(function(p){return<button key={p} style={pt(period===p)} onClick={function(){setPeriod(p);}}>{p}</button>;})}</div>}
+            {view==="tableau"&&entries.length>0&&<button onClick={doExport} style={{background:"#1a1a2e",color:"#fff",border:"none",borderRadius:"8px",padding:"7px 16px",fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Exporter CSV</button>}
+            {view==="saisie"&&<input type="date" value={date} onChange={function(ev){loadDate(ev.target.value);}} style={{border:"1px solid #e0e5f0",borderRadius:"8px",padding:"6px 10px",fontSize:"12px",color:"#1a1a2e",background:"#fff"}}/>}
+            {view==="saisie"&&<button style={{background:"#4f8ef7",color:"#fff",border:"none",borderRadius:"8px",padding:"7px 18px",fontSize:"12px",fontWeight:600,cursor:"pointer"}} onClick={save}>Enregistrer</button>}
+          </div>
+        </div>
+        <div style={{padding:"24px 28px",flex:1,position:"relative"}}>
+          {toast&&<div style={{position:"absolute",top:"14px",right:"28px",background:"#1a1a2e",color:"#fff",padding:"8px 16px",borderRadius:"8px",fontSize:"12px",zIndex:10}}>{toast}</div>}
+          {loading?<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"200px",color:"#8892b0"}}>Chargement...</div>:(
+            <div>
+              {view==="saisie"&&(
+                <div>
+                  <div style={{fontSize:"10px",fontWeight:700,textTransform:"uppercase",color:"#8892b0",marginBottom:"14px"}}>Donnees du {date}</div>
+                  <div style={{background:"#fff",borderRadius:"12px",border:"1px solid #e8ecf3",overflow:"hidden"}}>
+                    <div style={{padding:"14px 20px 12px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <span style={{fontSize:"13px",fontWeight:600,color:"#1a1a2e"}}>Saisie par campagne</span>
+                      <div style={{display:"flex",gap:"6px"}}>{CAMPS.map(function(c){return<span key={c} style={pill(c)}>{c}</span>;})}</div>
+                    </div>
+                    <div style={{overflowX:"auto"}}>
+                      <table style={{width:"100%",borderCollapse:"collapse",minWidth:"1000px"}}>
+                        <thead><tr><TH left={true}>Campagne</TH>{COLS.map(function(c){return<TH key={c.key}>{c.label}</TH>;})}</tr></thead>
+                        <tbody>{CAMPS.map(function(camp){return(
+                          <tr key={camp} style={{borderBottom:"1px solid #f0f2f7"}}>
+                            <td style={{padding:"8px 20px",textAlign:"left",fontWeight:700}}><span style={dot(camp)}></span>{camp}</td>
+                            {COLS.map(function(c){return(
+                              <td key={c.key} style={{padding:"5px",textAlign:"right"}}>
+                                <input type="number" min="0" step={c.dec===0?"1":"0.01"} value={getF(camp,c.key)} onChange={function(ev){setF(camp,c.key,ev.target.value);}} placeholder="0" style={inp}/>
+                              </td>
+                            );})}
+                          </tr>
+                        );})}</tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {view==="tableau"&&(
+                <div>
+                  <div style={{fontSize:"10px",fontWeight:700,textTransform:"uppercase",color:"#8892b0",marginBottom:"14px"}}>Consolide - {period}</div>
+                  <div style={{background:"#fff",borderRadius:"12px",border:"1px solid #e8ecf3",overflow:"hidden"}}>
+                    <div style={{overflowX:"auto",maxHeight:"75vh",overflowY:"auto"}}>
+                      <table style={{width:"100%",borderCollapse:"collapse",minWidth:"1200px"}}>
+                        <thead><tr><TH left={true}>Periode</TH><TH left={true}>Campagne</TH>{COLS.map(function(c){return<TH key={c.key}>{c.label}</TH>;})}</tr></thead>
+                        <tbody>
+                          {gkeys.length===0?<tr><td colSpan={COLS.length+2} style={{padding:"28px 20px",color:"#8892b0",textAlign:"center"}}>Aucune donnee.</td></tr>
+                          :gkeys.map(function(pk){
+                            var rows=grouped[pk];
+                            var ac=CAMPS.filter(function(cp){return rows.some(function(r){return r.campaign===cp;});});
+                            var ts=sumR(rows.filter(function(r){return CAMPS.includes(r.campaign);}));
+                            var sp=period==="Jour"&&isSp(pk),fe=period==="Jour"&&isF(pk);
+                            var campRows=ac.map(function(camp,ci){
+                              var s=sumR(rows.filter(function(r){return r.campaign===camp;}));
+                              return(
+                                <tr key={pk+camp} style={{borderBottom:"1px solid #f0f2f7",background:sp?"#fef9ec":"transparent"}}>
+                                  {ci===0&&<td rowSpan={ac.length} style={{padding:"11px 20px",textAlign:"left",fontWeight:700,color:sp?"#854F0B":"#1a1a2e",verticalAlign:"top",whiteSpace:"nowrap"}}>{fKey(pk,period)}{fe?" *":""}</td>}
+                                  <td style={{padding:"11px 12px",textAlign:"left",fontSize:"12px"}}><span style={dot(camp)}></span>{camp}</td>
+                                  {COLS.map(function(c){return<td key={c.key} style={tds(false)}>{fmt(s[c.key],c.dec)}</td>;})}
+                                </tr>
+                              );
+                            });
+                            var totRow=<tr key={pk+"_t"} style={{background:sp?"#fef3d0":"#f8f9fc",borderBottom:"4px solid #f4f6fa"}}><td></td><td style={{padding:"11px 12px",textAlign:"left",fontSize:"12px",color:"#8892b0",fontWeight:600}}>Total</td>{COLS.map(function(c){return<td key={c.key} style={tds(true)}>{fmt(ts[c.key],c.dec)}</td>;})}</tr>;
+                            return campRows.concat([totRow]);
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  {period==="Jour"&&<p style={{fontSize:"11px",color:"#8892b0",marginTop:"8px"}}>* Jour ferie</p>}
+                </div>
+              )}
+              {view==="csv"&&(
+                <div>
+                  <div style={{fontSize:"10px",fontWeight:700,textTransform:"uppercase",color:"#8892b0",marginBottom:"14px"}}>Import fichiers</div>
+                  <div style={{background:"#fff",borderRadius:"12px",border:"1px solid #e8ecf3",padding:"24px 28px",marginBottom:"16px"}}>
+                    <p style={{fontSize:"13px",fontWeight:600,color:"#1a1a2e",marginBottom:"6px"}}>1 - Performances (script GAds)</p>
+                    <p style={{fontSize:"12px",color:"#6b7aaa",marginBottom:"16px"}}>Fichier genere par le script GAds Performances.</p>
+                    <label style={{display:"inline-block",background:"#1a1a2e",color:"#fff",borderRadius:"8px",padding:"8px 20px",fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Importer les performances<input type="file" accept=".csv" onChange={handleCSV} style={{display:"none"}}/></label>
+                  </div>
+                  <div style={{background:"#fff",borderRadius:"12px",border:"1px solid #e8ecf3",padding:"24px 28px"}}>
+                    <p style={{fontSize:"13px",fontWeight:600,color:"#1a1a2e",marginBottom:"6px"}}>2 - Conversions (script GAds)</p>
+                    <p style={{fontSize:"12px",color:"#6b7aaa",marginBottom:"16px"}}>Fichier genere par le script GAds Conversions.</p>
+                    <label style={{display:"inline-block",background:"#0F6E56",color:"#fff",borderRadius:"8px",padding:"8px 20px",fontSize:"12px",fontWeight:600,cursor:"pointer"}}>Importer les conversions<input type="file" accept=".csv" onChange={handleConv} style={{display:"none"}}/></label>
+                  </div>
+                  {csvErr&&<p style={{color:"#e24b4a",fontSize:"12px",marginTop:"10px"}}>{csvErr}</p>}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App,null));
+</script>
+</body>
+</html>
