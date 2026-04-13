@@ -60,7 +60,7 @@ function App(){
   function upd(next){
     if(loading)return;
     setEntries(next);setSaving(true);
-    fetch(BIN_URL,{method:"PUT",headers:{"Content-Type":"application/json","X-Master-Key":BIN_KEY},body:JSON.stringify({entries:next})}).finally(function(){setSaving(false);});
+    fetch(BIN_URL,{method:"PUT",headers:{"Content-Type":"application/json","X-Master-Key":BIN_KEY},body:JSON.stringify({entries:next})}).then(function(r){if(!r.ok)console.error("JSONBin error",r.status);}).finally(function(){setSaving(false);});
   }
   function loadDate(d){setDate(d);var nf={};CAMPS.forEach(function(camp){var ex=entries.find(function(e){return e.date===d&&e.campaign===camp;});if(ex)COLS.forEach(function(c){nf[camp+"_"+c.key]=ex[c.key]!==undefined?ex[c.key]:"";});});setForm(nf);}
   function save(){var next=entries.slice();CAMPS.forEach(function(camp){var row={date:date,campaign:camp};COLS.forEach(function(c){row[c.key]=getF(camp,c.key);});var i=next.findIndex(function(e){return e.date===date&&e.campaign===camp;});if(i>=0)next[i]=row;else next.push(row);});upd(next);flash("Enregistre");}
