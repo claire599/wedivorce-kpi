@@ -53,11 +53,15 @@ function App(){
   const[form,setForm]=React.useState({});
   const[toast,setToast]=React.useState("");
   const[csvErr,setCsvErr]=React.useState("");
-  React.useEffect(function(){fetch(BIN_URL+"/latest",{headers:{"X-Master-Key":BIN_KEY}}).then(function(r){return r.json();}).then(function(d){setEntries(d.record.entries||[]);}).catch(function(){}).finally(function(){setLoading(false);});},[]); 
+  React.useEffect(function(){fetch(BIN_URL+"/latest",{headers:{"X-Master-Key":BIN_KEY}}).then(function(r){return r.json();}).then(function(d){setEntries(d.record.entries||[]);}).catch(function(){}).finally(function(){setLoading(false);});},[]);
   function flash(m){setToast(m);setTimeout(function(){setToast("");},2500);}
   function getF(camp,key){var v=form[camp+"_"+key];return v!==undefined?v:"";}
   function setF(camp,key,val){setForm(function(p){var n=Object.assign({},p);n[camp+"_"+key]=val;return n;});}
-  function upd(next){setEntries(next);setSaving(true);fetch(BIN_URL,{method:"PUT",headers:{"Content-Type":"application/json","X-Master-Key":BIN_KEY},body:JSON.stringify({entries:next})}).finally(function(){setSaving(false);});}
+  function upd(next){
+    if(loading)return;
+    setEntries(next);setSaving(true);
+    fetch(BIN_URL,{method:"PUT",headers:{"Content-Type":"application/json","X-Master-Key":BIN_KEY},body:JSON.stringify({entries:next})}).finally(function(){setSaving(false);});
+  }
   function loadDate(d){setDate(d);var nf={};CAMPS.forEach(function(camp){var ex=entries.find(function(e){return e.date===d&&e.campaign===camp;});if(ex)COLS.forEach(function(c){nf[camp+"_"+c.key]=ex[c.key]!==undefined?ex[c.key]:"";});});setForm(nf);}
   function save(){var next=entries.slice();CAMPS.forEach(function(camp){var row={date:date,campaign:camp};COLS.forEach(function(c){row[c.key]=getF(camp,c.key);});var i=next.findIndex(function(e){return e.date===date&&e.campaign===camp;});if(i>=0)next[i]=row;else next.push(row);});upd(next);flash("Enregistre");}
   var grouped=React.useMemo(function(){var g={};entries.forEach(function(e){var k=gKey(e.date,period);if(!g[k])g[k]=[];g[k].push(e);});var keys=Object.keys(g).sort();var result={};keys.forEach(function(k){result[k]=g[k];});return result;},[entries,period]);
